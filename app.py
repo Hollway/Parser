@@ -7,84 +7,79 @@ from parser import run_parse, stop_parse
 PID_PATH = "/tmp/tut.pid"
 
 
-
 def create_parser():
     parser = argparse.ArgumentParser(
         prog="TUT BY Parser.",
         description=(
-            "Программа для парсинга новостей\n"
-            "С сайта tut.by \n"
+            "Мега крутая программа для парсинга новостей\n"
+            "с сайта tut.by\n"
+            "Закостылил (c) Я "
         ),
-        add_help = False
+        add_help=False,
     )
-    
     parser.add_argument(
-        "-h", 
-        "--help", 
-        action="help", 
-        help="Вывести данное сообщение"
+        "-h",
+        "--help",
+        action="help",
+        help="Вывести данное сообщение.",
     )
-
     parser.add_argument(
-        "-v", 
-        "--version", 
-        action="version", 
-        help="Тукущая версия", 
-        version="0.1"
+        "-v",
+        "--version",
+        action="version",
+        help="Текущая версия.",
+        version="0.1",
     )
-
     parser.add_argument(
-        "-d", 
-        "--daemon", 
-        action="store_true", 
-        required=False, 
-        help="Запуск приложения в режиме демона."
+        "-d",
+        "--daemon",
+        action="store_true",
+        required=False,
+        help="Запуск приложения в режиме демона.",
     )
-
     parser.add_argument(
-        "-s", 
-        "--start", 
-        dest="start_date", 
-        required=True, 
-        help="Начальная дата"
+        "-s",
+        "--start",
+        dest="start_date",
+        required=False,
+        help="Начальная дата.",
     )
-
     parser.add_argument(
-        "-e", 
-        "--end", 
-        dest="end_date", 
-        required=False, 
-        help="Конечная дата"
+        "-e",
+        "--end",
+        dest="end_date",
+        required=False,
+        help="Конечная дата.",
     )
-
     parser.add_argument(
         "-k",
         "--kill",
         action="store_true",
-        help="Остановить приложение."
+        help="Остановить приложение.",
     )
-
     return parser
 
 parser = create_parser()
 args = parser.parse_args()
 
-def stop_handler(sigma, frame):
+def stop_handler(signum, frame):
     stop_parse()
 
 def start(daemon):
+    arguments = {"start_date": args.start_date}
+    if args.end_date is not None:
+        arguments.update(end_date=args.end_date)
     if daemon:
-        if os.path.isfile(PID_PATH)
+        if os.path.isfile(PID_PATH):
             print("Сервер уже работает!")
             return
         pid = os.fork()
         if not pid:
-            #Дочерний процесс
             with open(PID_PATH, "w") as pid_file:
-                pid_file.write(str(os.getpgid()))
+                pid_file.write(str(os.getpid()))
             signal.signal(signal.SIGTERM, stop_handler)
             try:
-                run_parse()
+                run_parse(**arguments)
             except Exception:
                 pass
             finally:
@@ -92,13 +87,14 @@ def start(daemon):
                     os.remove(PID_PATH)
                 except Exception:
                     pass
-
         else:
-            #Родительский процесс
-            print("Программа запущена в фоновом режиме")
+            print("Программа запущена в фоновом режиме.")
             return
     else:
-        run_parse()
+        try:
+            run_parse(**arguments)
+        except KeyboardInterrupt:
+            stop_parse()
 
 def stop(daemon):
     if daemon:
